@@ -13,10 +13,34 @@ export function activate(context: vscode.ExtensionContext) {
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
 	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('naive-definitions.helloWorld', () => {
+	let disposable = vscode.commands.registerCommand('naive-definitions.goToDefinition', () => {
 		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Naive Definitions!');
+		
+		// Get the active text editor
+		const editor = vscode.window.activeTextEditor;
+
+		if (editor) {
+			const document = editor.document;
+			const selection = editor.selection;
+
+			// Get the word within the selection
+			const selectedText = document.getText(selection);
+			if (selectedText.length === 0) {
+				vscode.window.showInformationMessage("No text selected.");
+				return;
+			}
+			
+			// get the 1st occurrence within the current file
+			const documentText = document.getText();
+			const indexOfSelectedText = documentText.indexOf(selectedText);
+			const position = editor.document.positionAt(indexOfSelectedText);
+
+			// move cursor & reveal line
+			editor.selection = new vscode.Selection(position, position);
+			vscode.commands.executeCommand("revealLine", {
+				lineNumber: position.line
+			});			
+		}
 	});
 
 	context.subscriptions.push(disposable);

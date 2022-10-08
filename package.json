@@ -10,16 +10,25 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:naive-definitions.helloWorld"
+    "onCommand:naive-definitions.goToDefinition"
   ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "naive-definitions.helloWorld",
-        "title": "Hello World"
+        "command": "naive-definitions.goToDefinition",
+        "title": "[Naive] Go To Definition"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+            "command": "naive-definitions.goToDefinition",
+            "group": "naive-definitions",
+            "when": "editorHasSelection && editorTextFocus"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
