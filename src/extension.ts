@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	
+
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "naive-definitions" is now active!');
@@ -20,26 +20,34 @@ export function activate(context: vscode.ExtensionContext) {
 		const editor = vscode.window.activeTextEditor;
 
 		if (editor) {
-			// Get the word within the selection
-			// const selectedText = document.getText(editor.selection);
-			// for testing purposes -> find the 1st occurrence of the the getConfig() function in the opengrok workspace
-			const selectedText = "function getConfig()";
-			if (selectedText.length === 0) {
-				vscode.window.showInformationMessage("No text selected.");
-				return;
-			}
-
 			// only work with workspaces
 			const workspaceFolders = vscode.workspace.workspaceFolders;
 			if (workspaceFolders === undefined) {
 				return;
 			}
 
+			// Get the word within the selection
+			const selectedText = editor.document.getText(editor.selection);
+			if (selectedText.length === 0) {
+				vscode.window.showInformationMessage("No text selected.");
+				return;
+			}
+
+			// searchText is the processed symbol based on the selection (very naive)
+			let searchText = "";
+			if (selectedText.indexOf("C_") === 0) {
+				// condition
+				searchText = "anim.Condition(\"" + selectedText;
+			} else {
+				// the rest is be treated as a state task
+				searchText = "StateTaskType(\"" + selectedText;
+			}
+
 			// get the 1st occurrence within the current file
 			const documentText = editor.document.getText();
-			const indexOfSelectedText = documentText.indexOf(selectedText);
-			if (indexOfSelectedText !== -1) {
-				const position = editor.document.positionAt(indexOfSelectedText);
+			const indexOfSearchText = documentText.indexOf(searchText);
+			if (indexOfSearchText !== -1) {
+				const position = editor.document.positionAt(indexOfSearchText);
 				// move cursor & reveal line
 				editor.selection = new vscode.Selection(position, position);
 				vscode.commands.executeCommand("revealLine", {
@@ -49,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 			// find all .ts documents in src/ folders
-			const documents = await vscode.workspace.findFiles('**/src/**/*.ts');
+			const documents = await vscode.workspace.findFiles('**/*.py', '**/*.al');
 			if (!documents) {
 				return;
 			}
@@ -60,22 +68,26 @@ export function activate(context: vscode.ExtensionContext) {
 				const fileContents = await vscode.workspace.fs.readFile(uri);
 				const documentText = fileContents?.toString();
 				if (documentText.length && !foundDefinition) {
-					const indexOfSelectedText = documentText.indexOf(selectedText);
-					if (indexOfSelectedText === -1) {
+					const indexOfSearchText = documentText.indexOf(searchText);
+					if (indexOfSearchText === -1) {
 						return;
 					}
 
 					// found our definition => open and show the document
 					foundDefinition = true;
 					const document = await vscode.workspace.openTextDocument(uri);
-					await vscode.window.showTextDocument(document, { preview: false });
+					await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
 
 					// focus at the line & column
-					const position = editor.document.positionAt(indexOfSelectedText);
-					editor.selection = new vscode.Selection(position, position);
-					vscode.commands.executeCommand("revealLine", {
-						lineNumber: position.line
-					});
+					const position = document.positionAt(indexOfSearchText);					
+					if (vscode.window.activeTextEditor) {
+						vscode.window.activeTextEditor.selection = new vscode.Selection(position.line, 0, position.line, document.lineAt(position.line).text.length);
+						vscode.commands.executeCommand("revealLine", {
+							lineNumber: position.line,
+							at: "center",
+							revealCursor: true
+						});
+					}
 				}
 			});
 		}
