@@ -49,9 +49,11 @@ export function activate(context: vscode.ExtensionContext) {
 			if (indexOfSearchText !== -1) {
 				const position = editor.document.positionAt(indexOfSearchText);
 				// move cursor & reveal line
-				editor.selection = new vscode.Selection(position, position);
+				editor.selection = new vscode.Selection(position.line, 0, position.line, editor.document.lineAt(position.line).text.length);
 				vscode.commands.executeCommand("revealLine", {
-					lineNumber: position.line
+					lineNumber: position.line,
+					at: "center",
+					revealCursor: true
 				});
 				return;
 			}
@@ -79,7 +81,7 @@ export function activate(context: vscode.ExtensionContext) {
 					await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
 
 					// focus at the line & column
-					const position = document.positionAt(indexOfSearchText);					
+					const position = document.positionAt(indexOfSearchText);
 					if (vscode.window.activeTextEditor) {
 						vscode.window.activeTextEditor.selection = new vscode.Selection(position.line, 0, position.line, document.lineAt(position.line).text.length);
 						vscode.commands.executeCommand("revealLine", {
