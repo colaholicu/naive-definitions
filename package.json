@@ -2,7 +2,7 @@
   "name": "naive-definitions",
   "displayName": "Naive Definitions",
   "description": "A naive, find-in-files implementation of going to the definition of a symbol",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.72.0"
   },
@@ -20,12 +20,53 @@
         "title": "[Naive] Go To Definition"
       }
     ],
+    "configuration": {
+      "title": "Naive Definition",
+      "properties": {
+        "naive-definitions.definitionMappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "title": "Prefix to Definition form matching",
+            "properties": {
+              "prefix": {
+                "type": "string",
+                "description": "Prefix of the pattern"
+              },
+              "definition": {
+                "type": "string",
+                "description": "Prefix of the pattern's definition"
+              }
+            }
+          },
+          "default": [
+            {
+              "prefix": "C_",
+              "definition": "anim.Condition(\""
+            },
+            {
+              "prefix": "SG_",
+              "definition": "= \""
+            },
+            {
+              "prefix": "SG_",
+              "definition": "=\""
+            },
+            {
+              "prefix": "",
+              "definition": "StateTaskType(\""
+            }
+          ],
+          "description": "Configure mapping patterns (naive, non-regex) to their supposed definitions in order of precedence!"
+        }
+      }
+    },
     "menus": {
       "editor/context": [
         {
-            "command": "naive-definitions.goToDefinition",
-            "group": "naive-definitions",
-            "when": "editorHasSelection && editorTextFocus"
+          "command": "naive-definitions.goToDefinition",
+          "group": "naive-definitions",
+          "when": "editorHasSelection && editorTextFocus"
         }
       ]
     }
