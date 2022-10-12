@@ -39,23 +39,7 @@
               }
             }
           },
-          "default": [
-            {
-              "prefix": "C_",
-              "definition": "anim.Condition(\""
-            },
-            {
-              "prefix": "SG_",
-              "definition": "= \""
-            },
-            {
-              "prefix": "SG_",
-              "definition": "=\""
-            },
-            {
-              "prefix": "",
-              "definition": "StateTaskType(\""
-            }
+          "default": [            
           ],
           "description": "Configure mapping patterns (naive, non-regex) to their supposed definitions in order of precedence!"
         }
