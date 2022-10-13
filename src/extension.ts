@@ -35,7 +35,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 			// searchText is the processed symbol based on the selection (very naive)
 			let searchText = "";
-			if (selectedText.indexOf("C_") === 0) {
 			const mappings = vscode.workspace.getConfiguration("naive-definitions").definitionMappings;
 			for (let mapping of mappings) {
 				if (selectedText.indexOf(mapping.prefix) === 0) {
