@@ -36,11 +36,17 @@ export function activate(context: vscode.ExtensionContext) {
 			// searchText is the processed symbol based on the selection (very naive)
 			let searchText = "";
 			if (selectedText.indexOf("C_") === 0) {
-				// condition
-				searchText = "anim.Condition(\"" + selectedText;
-			} else {
-				// the rest is be treated as a state task
-				searchText = "StateTaskType(\"" + selectedText;
+			const mappings = vscode.workspace.getConfiguration("naive-definitions").definitionMappings;
+			for (let mapping of mappings) {
+				if (selectedText.indexOf(mapping.prefix) === 0) {
+					searchText = mapping.definition + selectedText;
+					break;
+				}
+			}
+
+			if (searchText.length === 0) {
+				// didn't find anything, look for assignment operations
+				searchText = "= \"" + selectedText;
 			}
 
 			// get the 1st occurrence within the current file
