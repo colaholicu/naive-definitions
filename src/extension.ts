@@ -48,10 +48,17 @@ class Searcher {
 				break;
 
 			case SearchStatus.idle:
-				if (this.triedExactMatch === true) {
-					// tried all definitions -> not found
+				if (this.triedExactMatch) {
+					// tried all definitions -> try equality ops, otherwise -> not found
 					if (this.triedDefinitions.length === this.definitions.length) {
-						this.setStatus(SearchStatus.notFound);
+						if (this.triedEquality) {
+							this.setStatus(SearchStatus.notFound);
+						}
+						else {
+							this.potentialDefinition = "= \"" + this.searchText;
+							this.triedEquality = true;
+							this.setStatus(SearchStatus.matching);
+						}
 						break;
 					}
 
@@ -94,7 +101,7 @@ class Searcher {
 
 			case SearchStatus.matching:
 				this.filesSearched = 0;
-				if (this.tryLocalSearch() === true) {
+				if (this.tryLocalSearch()) {
 					this.setStatus(SearchStatus.found);
 				}
 
@@ -140,7 +147,7 @@ class Searcher {
 						this.setStatus(SearchStatus.idle);
 					}
 					return;
-				}				
+				}
 
 				// found our definition => open and show the document				
 				const document = await vscode.workspace.openTextDocument(uri);
