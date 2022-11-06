@@ -2,7 +2,8 @@
   "name": "naive-definitions",
   "displayName": "Naive Definitions",
   "description": "A naive, find-in-files implementation of going to the definition of a symbol",
-  "version": "0.0.3",
+  "version": "0.0.4",
+  "repository": "https://github.com/colaholicu/naive-definitions",
   "engines": {
     "vscode": "^1.72.0"
   },
