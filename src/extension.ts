@@ -175,11 +175,7 @@ class Searcher {
 	}
 
 	async setupFileFilter() {
-		// only for debugging
-		this.definitions = [{ prefix: "C_", definition: "anim.Condition(\"" }, { prefix: "macarena", definition: "CACA" }];
-		// only for debugging
-
-		this.searchFiles = await vscode.workspace.findFiles('**/*.{py,al}');
+		this.searchFiles = await vscode.workspace.findFiles('**/*.{py,al,nss}');
 		if (!this.searchFiles) {
 			return;
 		}
