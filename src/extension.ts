@@ -11,20 +11,21 @@ enum SearchStatus {
 }
 
 class Searcher {
-	searchText: string = "";
+	selectedText: string = "";
 	potentialDefinition: string = ""; // will be continually replaced until a match is found or none
 	searchFiles: vscode.Uri[] = [];
 	searchStatus = SearchStatus.setup;
 
 	foundMatch = false;
-	definitions = vscode.workspace.getConfiguration("naive-definitions").definitionMappings;
+	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions").definitions;
+	fileTypes: string = vscode.workspace.getConfiguration("naive-definitions").fileTypes;
+	generalMatcher: string = vscode.workspace.getConfiguration("naive-definitions").generalMatcher;
 	triedDefinitions: string[] = [];
-	triedExactMatch = false;
-	triedEquality = false; // TBD
 	filesSearched = 0;
 
-	constructor(searchText: string) {
-		this.searchText = searchText;
+
+	constructor(selectedText: string) {
+		this.selectedText = selectedText;
 	}
 
 	setStatus(status: SearchStatus) {
@@ -37,7 +38,7 @@ class Searcher {
 			this.search();
 		}
 		else {
-			vscode.window.showInformationMessage("No definition found selected.");
+			vscode.window.showInformationMessage("No definition found.");
 		}
 	}
 
@@ -48,66 +49,93 @@ class Searcher {
 				break;
 
 			case SearchStatus.idle:
-				if (this.triedExactMatch) {
-					// tried all definitions -> try equality ops, otherwise -> not found
-					if (this.triedDefinitions.length === this.definitions.length) {
-						if (this.triedEquality) {
-							this.setStatus(SearchStatus.notFound);
-						}
-						else {
-							this.potentialDefinition = "= \"" + this.searchText;
-							this.triedEquality = true;
-							this.setStatus(SearchStatus.matching);
-						}
-						break;
-					}
+				// tried all definitions -> not found
+				if (this.triedDefinitions.length === this.definitions.length) {
+					this.setStatus(SearchStatus.notFound);
+				}
 
-					// try one more definition
-					for (let mapping of this.definitions) {
-						let found = false;
-						for (let triedDefinition of this.triedDefinitions) {
-							if (triedDefinition === mapping.definition) {
-								found = true;
-								break;
+				// try one more definition
+				for (let definition of this.definitions) {
+					let found = false;
+					for (let triedDefinition of this.triedDefinitions) {
+						if (triedDefinition === definition) {
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						// if this current definition is a regex (maybe different from the general one) -> has priority
+						const regexToken = "${regex}=";
+						const definitionToken = "${DEFINITION}";
+						const selectedTextToken = "${SELECTED_TEXT}";
+						if (definition.indexOf(regexToken) >= 0) {
+							this.potentialDefinition = definition.replace(regexToken, "");
+
+							if (definition.indexOf(definitionToken) !== -1) {
+								vscode.window.showInformationMessage("Invalid token ${DEFINITION} found in definition " + definition + ". Ignoring!");
+								this.triedDefinitions.push(definition);
+								continue;
+							}
+
+							// the selected text token isn't present -> just append it
+							if (this.potentialDefinition.indexOf(selectedTextToken) === -1) {
+								this.potentialDefinition += this.selectedText;
+							}
+							// the selected text token is present -> replace it
+							else {
+								this.potentialDefinition = this.potentialDefinition.replace(selectedTextToken, this.selectedText);
 							}
 						}
-						if (!found) {
-							this.potentialDefinition = mapping.definition + this.searchText;
-							this.triedDefinitions.push(mapping.definition);
-							this.setStatus(SearchStatus.matching);
-							break;
+						// current definition wasn't a regex, but we have a regex expression that's a general matching rule -> replace tokens
+						else if (this.generalMatcher.length > 0) {
+							this.potentialDefinition = this.generalMatcher;
+							this.potentialDefinition = this.potentialDefinition.replace(definitionToken, definition);
+							this.potentialDefinition = this.potentialDefinition.replace(selectedTextToken, this.selectedText);
 						}
-					}
-				}
-				else {
-					// try exact match first
-					for (let mapping of this.definitions) {
-						if (this.searchText.indexOf(mapping.prefix) === 0) {
-							this.potentialDefinition = mapping.definition + this.searchText;
-							this.triedExactMatch = true;
-							this.triedDefinitions.push(mapping.definition);
-							this.setStatus(SearchStatus.matching);
-							break;
+						// no general matching rule, just append selected text to the definition
+						else {
+							this.potentialDefinition = definition + this.selectedText;
 						}
-					}
 
-					// didn't find any matches -> go through all
-					if (!this.triedExactMatch) {
-						this.triedExactMatch = true;
-						this.setStatus(SearchStatus.idle);
+						this.triedDefinitions.push(definition);
+						this.setStatus(SearchStatus.matching);
+						break;
 					}
 				}
 				break;
 
 			case SearchStatus.matching:
 				this.filesSearched = 0;
-				if (this.tryLocalSearch()) {
-					this.setStatus(SearchStatus.found);
-				}
-
-				this.tryWorkspaceSearch();
+				if (!this.tryLocalSearch()) {
+					this.tryWorkspaceSearch();
+				}				
 				break;
 		}
+	}
+
+	getIndexOfPotentialDefinition(documentText : string)
+	{
+		const matchedLocation = documentText.match(this.potentialDefinition);
+		if (matchedLocation && matchedLocation.index !== undefined) {
+			return matchedLocation.index;
+		}
+		
+		return -1;
+	}
+
+	moveToIndexInDocument(document : vscode.TextDocument, index : number) {
+		if (!vscode.window.activeTextEditor) {
+			return false;
+		}
+
+		const position = document.positionAt(index);
+		// move cursor & reveal line
+		vscode.window.activeTextEditor.selection = new vscode.Selection(position.line, 0, position.line, document.lineAt(position.line).text.length);
+		vscode.commands.executeCommand("revealLine", {
+			lineNumber: position.line,
+			at: "center",
+			revealCursor: true
+		});
 	}
 
 	tryLocalSearch() {
@@ -115,18 +143,12 @@ class Searcher {
 			return false;
 		}
 
+		const document = vscode.window.activeTextEditor.document;
 		// get the 1st occurrence within the current file
-		const documentText = vscode.window.activeTextEditor.document.getText();
-		const indexOfPotentialDefinition = documentText.indexOf(this.potentialDefinition);
+		const indexOfPotentialDefinition = this.getIndexOfPotentialDefinition(document.getText());
 		if (indexOfPotentialDefinition !== -1) {
-			const position = vscode.window.activeTextEditor.document.positionAt(indexOfPotentialDefinition);
-			// move cursor & reveal line
-			vscode.window.activeTextEditor.selection = new vscode.Selection(position.line, 0, position.line, vscode.window.activeTextEditor.document.lineAt(position.line).text.length);
-			vscode.commands.executeCommand("revealLine", {
-				lineNumber: position.line,
-				at: "center",
-				revealCursor: true
-			});
+			this.moveToIndexInDocument(document, indexOfPotentialDefinition);
+			this.setStatus(SearchStatus.found);
 			return true;
 		}
 
@@ -135,47 +157,34 @@ class Searcher {
 
 	tryWorkspaceSearch() {
 		this.searchFiles.forEach(async uri => {
-			const fileContents = await vscode.workspace.fs.readFile(uri);
-			const documentText = fileContents?.toString();
-
-			if (documentText.length && this.searchStatus !== SearchStatus.found) {
-				const indexOfSearchText = documentText.indexOf(this.potentialDefinition);
-				if (indexOfSearchText === -1) {
-					this.filesSearched++;
-					// tried all files, nothing found --> try another definition
-					if (this.filesSearched === this.searchFiles.length) {
-						this.setStatus(SearchStatus.idle);
-					}
-					return;
-				}
-
-				// found our definition => open and show the document				
-				const document = await vscode.workspace.openTextDocument(uri);
-				await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
-
-				// focus at the line & column
-				const position = document.positionAt(indexOfSearchText);
-				if (vscode.window.activeTextEditor) {
-					vscode.window.activeTextEditor.selection = new vscode.Selection(position.line, 0, position.line, document.lineAt(position.line).text.length);
-					vscode.commands.executeCommand("revealLine", {
-						lineNumber: position.line,
-						at: "center",
-						revealCursor: true
-					});
-
-					// found our file
-					this.setStatus(SearchStatus.found);
-				}
-				else {
-					// an error occurred 
-					this.setStatus(SearchStatus.notFound);
-				}
+			if (this.searchStatus === SearchStatus.found) {
+				return;
 			}
+			
+			const fileContents = await vscode.workspace.fs.readFile(uri);
+			const indexOfPotentialDefinition = this.getIndexOfPotentialDefinition(fileContents?.toString());
+			if (indexOfPotentialDefinition === -1) {
+				this.filesSearched++;
+				// tried all files, nothing found --> try another definition
+				if (this.filesSearched === this.searchFiles.length) {
+					this.setStatus(SearchStatus.idle);
+				}
+				return;
+			}
+
+			// found our definition => open and show the document				
+			const document = await vscode.workspace.openTextDocument(uri);
+			await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
+
+			// focus at the line & column
+			this.moveToIndexInDocument(document, indexOfPotentialDefinition);
+			// update found status
+			this.setStatus(SearchStatus.found);
 		});
 	}
 
 	async setupFileFilter() {
-		this.searchFiles = await vscode.workspace.findFiles('**/*.{py,al,nss}');
+		this.searchFiles = await vscode.workspace.findFiles(this.fileTypes);
 		if (!this.searchFiles) {
 			return;
 		}

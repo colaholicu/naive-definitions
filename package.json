@@ -2,7 +2,7 @@
   "name": "naive-definitions",
   "displayName": "Naive Definitions",
   "description": "A naive, find-in-files implementation of going to the definition of a symbol",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "repository": "https://github.com/colaholicu/naive-definitions",
   "engines": {
     "vscode": "^1.72.0"
@@ -22,27 +22,26 @@
       }
     ],
     "configuration": {
-      "title": "Naive Definition",
+      "title": "Naive Definitions",
       "properties": {
-        "naive-definitions.definitionMappings": {
+        "naive-definitions.definitions": {
           "type": "array",
           "items": {
-            "type": "object",
-            "title": "Prefix to Definition form matching",
-            "properties": {
-              "prefix": {
-                "type": "string",
-                "description": "Prefix of the pattern"
-              },
-              "definition": {
-                "type": "string",
-                "description": "Prefix of the pattern's definition"
-              }
-            }
+            "type": "string",
+            "title": "Definition keyword/prefixe or a regex to which the selected text will be added or, if using the ${SELECTED_TEXT} token, replaced. If a regex is used, it is this definition's that will be used instead of the general matcher. To signal a regex, the definition must start with ${regex}="
           },
           "default": [            
           ],
-          "description": "Configure mapping patterns (naive, non-regex) to their supposed definitions in order of precedence!"
+          "description": "Various (preferably somewhat unique) keywords that would be part of a looked up definition (example: anim.Condition). These should be specified in the order of precedence!"
+        },
+        "naive-definitions.fileTypes": {
+          "type": "string",
+          "description": "A glob for file matching (example: **/*.{h,cpp} for matching all .h and .cpp files in the workspace)."
+        },
+        "naive-definitions.generalMatcher": {
+          "type": "string",
+          "default": "${DEFINITION}[(\"'\\t ]*${SELECTED_TEXT}",
+          "description": "The expression to be used to match a selected text to a potential definition. ${DEFINITION} and ${SELECTED_TEXT} are tokens that will be replaced at runtime with the respective values. Can be empty if you want to use individual regexes for each expression."
         }
       }
     },
