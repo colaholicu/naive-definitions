@@ -28,11 +28,11 @@
           "type": "array",
           "items": {
             "type": "string",
-            "title": "Definition keyword/prefixe or a regex to which the selected text will be added or, if using the ${SELECTED_TEXT} token, replaced. If a regex is used, it is this definition's that will be used instead of the general matcher. To signal a regex, the definition must start with ${regex}="
+            "title": "Definition keyword/prefix or a regex to which the selected text will be added or, if using the ${SELECTED_TEXT} token, replaced. If a regex is used, it is this definition's that will be used instead of the general matcher. To signal a regex, the definition must start with ${regex}="
           },
           "default": [            
           ],
-          "description": "Various (preferably somewhat unique) keywords that would be part of a looked up definition (example: anim.Condition). These should be specified in the order of precedence!"
+          "description": "Various (preferably somewhat unique) keywords/prefixes or regexes to which the selected text will be added or, if using the ${SELECTED_TEXT} token, replaced. If a regex is used, it is the definition's that will be used instead of the general matcher. To signal a regex, the definition must start with ${regex}=. These should be specified in the order of precedence!"
         },
         "naive-definitions.fileTypes": {
           "type": "string",
