@@ -22,6 +22,7 @@ class Searcher {
 	generalMatcher: string = vscode.workspace.getConfiguration("naive-definitions").generalMatcher;
 	triedDefinitions: string[] = [];
 	filesSearched = 0;
+	triedCurrentFile = false;
 
 
 	constructor(selectedText: string) {
@@ -106,9 +107,25 @@ class Searcher {
 
 			case SearchStatus.matching:
 				this.filesSearched = 0;
-				if (!this.tryLocalSearch()) {
+				// first try all definition inside the current file
+				if (!this.triedCurrentFile) {
+					if (!this.tryLocalSearch()) {
+						// reset and prepare for search in the whole workspace
+						if (this.triedDefinitions.length === this.definitions.length) {
+							this.triedDefinitions.length = 0;
+							this.triedCurrentFile = true;
+						}
+					}
+				}
+
+				// tried all the definitions in the current file -> check the workspace
+				if (this.triedCurrentFile) {
 					this.tryWorkspaceSearch();
-				}				
+					return;
+				}
+
+				// try another definition
+				this.setStatus(SearchStatus.idle);
 				break;
 		}
 	}
