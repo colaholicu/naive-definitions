@@ -116,6 +116,10 @@ class Searcher {
 							this.triedCurrentFile = true;
 						}
 					}
+					// found it -> don't try finding again
+					else {
+						return;
+					}
 				}
 
 				// tried all the definitions in the current file -> check the workspace
