@@ -328,8 +328,6 @@ class Scrubber {
 
 	scrubWorkspace() {
 		// tried all definitions -> we're done
-		if (this.triedDefinitions.length === this.definitions.length) {
-			this.setStatus(ScrubStatus.done);
 		if (this.triedDefinitions.length === this.definitions.length) {			
 			this.setStatus(ScrubStatus.complete);
 			return;
