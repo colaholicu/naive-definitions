@@ -1,12 +1,10 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { json } from 'stream/consumers';
 import { TextEncoder } from 'util';
 import * as vscode from 'vscode';
 
 type Definition = {
-	symbol: string;
-	file: string;
+	file: vscode.Uri;
 	location: number;
 };
 
@@ -23,6 +21,7 @@ class Searcher {
 	potentialDefinition: string = ""; // will be continually replaced until a match is found or none
 	searchFiles: vscode.Uri[] = [];
 	searchStatus = SearchStatus.setup;
+	useScrubData = true;
 
 	foundMatch = false;
 	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions").definitions;
@@ -31,6 +30,7 @@ class Searcher {
 	triedDefinitions: string[] = [];
 	filesSearched = 0;
 	triedCurrentFile = false;
+
 
 
 	constructor(selectedText: string) {
@@ -61,6 +61,31 @@ class Searcher {
 				// tried all definitions -> not found
 				if (this.triedDefinitions.length === this.definitions.length) {
 					this.setStatus(SearchStatus.notFound);
+				}
+
+				if (this.useScrubData) {
+					// check scrub data
+					let scrubDataForSymbol = gScrubber.definitionsMap.get(this.selectedText);
+					if (scrubDataForSymbol) {
+						let currentDocument = vscode.window.activeTextEditor!.document;
+						let containingFile = scrubDataForSymbol[0].file;
+						if (containingFile === currentDocument.uri) {
+							this.moveToIndexInDocument(currentDocument, scrubDataForSymbol[0].location);
+							this.setStatus(SearchStatus.found);
+						}
+						else {
+							// found our definition => open and show the document				
+							const document = await vscode.workspace.openTextDocument(containingFile);
+							await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
+
+							// focus at the line & column
+							this.moveToIndexInDocument(document, scrubDataForSymbol[0].location);
+							// update found status
+							this.setStatus(SearchStatus.found);
+						}
+						
+						return;
+					}
 				}
 
 				// try one more definition
@@ -227,6 +252,7 @@ enum ScrubStatus {
 	idle,
 	scrubbing,
 	done,
+	dump,
 	complete,
 }
 
@@ -236,7 +262,6 @@ class Scrubber {
 	scrubFiles: vscode.Uri[] = [];
 	scrubStatus = ScrubStatus.setup;
 	definitionsMap = new Map<string, Definition[]>();
-	scrubbedFiles = new Map<string, string[]>();
 
 	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions").definitions;
 	fileTypes: string = vscode.workspace.getConfiguration("naive-definitions").fileTypes;
@@ -244,8 +269,34 @@ class Scrubber {
 	triedDefinitions: string[] = [];
 	filesScrubbed = 0;
 
+	maximumScrubs = 0;
+	currentScrubs = 0;
+
+	statusBarItem : vscode.StatusBarItem | undefined;
+	animatedStatusBarItem : vscode.StatusBarItem | undefined;
+
+	updateScrubProgress() {
+		if ((this.maximumScrubs <= 0) || !this.statusBarItem) {
+			return;
+		}
+
+		const progress = (this.currentScrubs / this.maximumScrubs * 100).toFixed(0);
+		this.statusBarItem.text = "[Naive] Updating scrub data (" + progress + "%)";
+	}
+
+	setStatusBarItem(statusBarItem : vscode.StatusBarItem, animatedStatusBarItem : vscode.StatusBarItem) {
+		this.statusBarItem = statusBarItem;
+		this.animatedStatusBarItem = animatedStatusBarItem;
+	}
+
 	setStatus(status: ScrubStatus) {
 		this.scrubStatus = status;
+
+		if (this.scrubStatus === ScrubStatus.complete) {
+			this.statusBarItem?.hide();
+			this.animatedStatusBarItem?.hide();
+			return;			
+		}
 
 		this.scrub();
 	}
@@ -253,27 +304,34 @@ class Scrubber {
 	async scrub() {
 		switch (this.scrubStatus) {
 			case ScrubStatus.setup:
+				this.currentScrubs = 0;
+				this.statusBarItem?.show();
+				this.animatedStatusBarItem?.show();
+				this.updateScrubProgress();
 				await this.setupFileFilter();
 				break;
 
 			case ScrubStatus.idle:
+				this.definitionsMap.clear();
+				this.triedDefinitions.length = 0;
+			case ScrubStatus.done:
+				this.filesScrubbed = 0;
 				this.scrubWorkspace();
 				break;
 
-			case ScrubStatus.scrubbing:
-				break;
-
-			case ScrubStatus.done:
+			case ScrubStatus.dump:
 				let uint8Array = new TextEncoder().encode("iosif");
-				vscode.workspace.fs.writeFile(vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, "./.naive/def"), uint8Array);
+				vscode.workspace.fs.writeFile(vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, "./.naive/def"), uint8Array);				
+				this.setStatus(ScrubStatus.complete);
 				break;
 		}
 	}
 
 	scrubWorkspace() {
 		// tried all definitions -> we're done
-		if (this.triedDefinitions.length === this.definitions.length) {
-			this.setStatus(ScrubStatus.done);
+		if (this.triedDefinitions.length === this.definitions.length) {			
+			this.setStatus(ScrubStatus.complete);
+			return;
 		}
 
 		// try one more definition
@@ -318,7 +376,7 @@ class Scrubber {
 			else if (this.generalMatcher.length > 0) {
 				this.potentialDefinition = this.generalMatcher;
 				this.potentialDefinition = this.potentialDefinition.replace(definitionToken, definition);
-				this.potentialDefinition = this.potentialDefinition.replace(selectedTextToken, this.selectedText);
+				this.potentialDefinition = this.potentialDefinition.replace(selectedTextToken, "");
 			}
 			// no general matching rule, just append selected text to the definition
 			else {
@@ -327,7 +385,9 @@ class Scrubber {
 		}
 
 		
-		this.scrubFiles.forEach(async uri => {			
+		this.scrubFiles.forEach(async uri => {
+			this.currentScrubs++;
+			this.updateScrubProgress();
 			const fileContents = await vscode.workspace.fs.readFile(uri);
 			if (fileContents) {
 				const regexp = new RegExp("(" + this.potentialDefinition + ")(\\W*)(\\w*)", "g");
@@ -339,11 +399,11 @@ class Scrubber {
 
 					}
 					
-					this.definitionsMap.get(symbol)!.push({ file : uri.toString(), location : match.index!, symbol: ''});
+					this.definitionsMap.get(symbol)!.push({ file : uri, location : match.index! });
                 }
                 this.filesScrubbed++;
 				// tried all files --> try another definition
-				if (this.filesScrubbed === this.scrubFiles.length) {
+				if (this.filesScrubbed >= this.scrubFiles.length) {
 					this.setStatus(ScrubStatus.done);
 					return;
 				}
@@ -359,22 +419,33 @@ class Scrubber {
 			return;
 		}
 
+		this.maximumScrubs = this.scrubFiles.length * this.definitions.length;
+
 		this.setStatus(ScrubStatus.idle);
 	}
 }
 
+let gScrubber = new Scrubber();
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {	
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
+export async function activate(context: vscode.ExtensionContext) {				
+
+	// create a new status bar item that we can now manage
+	let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	let animatedstatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
+	animatedstatusBarItem.text = "$(sync~spin)";
+	context.subscriptions.push(animatedstatusBarItem);
+	context.subscriptions.push(statusBarItem);
+
+	gScrubber.setStatusBarItem(statusBarItem, animatedstatusBarItem);
+	gScrubber.scrub();
+
 	let disposable = vscode.commands.registerCommand('naive-definitions.goToDefinition', async () => {
 		// The code you place here will be executed every time your command is executed
 
 		// Get the active text editor
 		const editor = vscode.window.activeTextEditor;
-
 		if (editor) {
 			// only work with workspaces
 			const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -393,11 +464,14 @@ export function activate(context: vscode.ExtensionContext) {
 			searcher.search();
 		}
 	});
-
 	context.subscriptions.push(disposable);
 
-	let scrubber = new Scrubber();
-	scrubber.scrub();
+	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((e) => {
+		// for now only trigger when scrubbing was complete, might have some desync data, but it's fine
+		if (gScrubber.scrubStatus === ScrubStatus.complete) {
+			gScrubber.setStatus(ScrubStatus.setup);
+		}
+	}));
 }
 
 // this method is called when your extension is deactivated
