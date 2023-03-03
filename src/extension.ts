@@ -5,8 +5,6 @@ import { TextEncoder } from 'util';
 import * as vscode from 'vscode';
 
 type Definition = {
-	symbol: string;
-	file: string;
 	file: vscode.Uri;
 	location: number;
 };
@@ -35,7 +33,6 @@ class Searcher {
 	triedCurrentFile = false;
 
 
-	constructor(selectedText: string) {
 		this.selectedText = selectedText;
 	}
 
@@ -264,7 +261,6 @@ class Scrubber {
 	scrubFiles: vscode.Uri[] = [];
 	scrubStatus = ScrubStatus.setup;
 	definitionsMap = new Map<string, Definition[]>();
-	scrubbedFiles = new Map<string, string[]>();
 
 	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions").definitions;
 	fileTypes: string = vscode.workspace.getConfiguration("naive-definitions").fileTypes;
@@ -322,13 +318,8 @@ class Scrubber {
 				this.scrubWorkspace();
 				break;
 
-			case ScrubStatus.scrubbing:
-				break;
-
-			case ScrubStatus.done:
 			case ScrubStatus.dump:
 				let uint8Array = new TextEncoder().encode("iosif");
-				vscode.workspace.fs.writeFile(vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, "./.naive/def"), uint8Array);
 				vscode.workspace.fs.writeFile(vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, "./.naive/def"), uint8Array);				
 				this.setStatus(ScrubStatus.complete);
 				break;
@@ -386,7 +377,6 @@ class Scrubber {
 			else if (this.generalMatcher.length > 0) {
 				this.potentialDefinition = this.generalMatcher;
 				this.potentialDefinition = this.potentialDefinition.replace(definitionToken, definition);
-				this.potentialDefinition = this.potentialDefinition.replace(selectedTextToken, this.selectedText);
 				this.potentialDefinition = this.potentialDefinition.replace(selectedTextToken, "");
 			}
 			// no general matching rule, just append selected text to the definition
@@ -396,7 +386,6 @@ class Scrubber {
 		}
 
 		
-		this.scrubFiles.forEach(async uri => {			
 		this.scrubFiles.forEach(async uri => {
 			this.currentScrubs++;
 			this.updateScrubProgress();
@@ -411,12 +400,10 @@ class Scrubber {
 
 					}
 					
-					this.definitionsMap.get(symbol)!.push({ file : uri.toString(), location : match.index!, symbol: ''});
 					this.definitionsMap.get(symbol)!.push({ file : uri, location : match.index! });
                 }
                 this.filesScrubbed++;
 				// tried all files --> try another definition
-				if (this.filesScrubbed === this.scrubFiles.length) {
 				if (this.filesScrubbed >= this.scrubFiles.length) {
 					this.setStatus(ScrubStatus.done);
 					return;
@@ -443,10 +430,6 @@ let gScrubber = new Scrubber();
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {	
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
 export async function activate(context: vscode.ExtensionContext) {				
 
 	// create a new status bar item that we can now manage
@@ -464,7 +447,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		// Get the active text editor
 		const editor = vscode.window.activeTextEditor;
-
 		if (editor) {
 			// only work with workspaces
 			const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -483,11 +465,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			searcher.search();
 		}
 	});
-
 	context.subscriptions.push(disposable);
 
-	let scrubber = new Scrubber();
-	scrubber.scrub();
 
 	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((e) => {
 		// for now only trigger when scrubbing was complete, might have some desync data, but it's fine
