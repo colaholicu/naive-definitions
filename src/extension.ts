@@ -1,6 +1,5 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { json } from 'stream/consumers';
 import { TextEncoder } from 'util';
 import * as vscode from 'vscode';
 
@@ -33,6 +32,8 @@ class Searcher {
 	triedCurrentFile = false;
 
 
+
+	constructor(selectedText: string) {
 		this.selectedText = selectedText;
 	}
 
@@ -464,7 +465,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 	context.subscriptions.push(disposable);
-
 
 	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((e) => {
 		// for now only trigger when scrubbing was complete, might have some desync data, but it's fine
