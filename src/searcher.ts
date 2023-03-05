@@ -57,32 +57,27 @@ export class Searcher {
 				}
 
 				if (this.useScrubData) {
-                    try {
-                        // check scrub data
-                        let scrubDataForSymbol = this.scrubber.getDefinitionForSymbol(this.selectedText);
-                        if (scrubDataForSymbol) {
-                            let currentDocument = vscode.window.activeTextEditor!.document;
-                            let containingFile = scrubDataForSymbol[0].file;
-                            if (containingFile === currentDocument.uri) {
-                                this.moveToIndexInDocument(currentDocument, scrubDataForSymbol[0].location);
-                                this.setStatus(SearchStatus.found);
-                            }
-                            else {
-                                // found our definition => open and show the document				
-                                const document = await vscode.workspace.openTextDocument(containingFile);
-                                await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
+                    // check scrub data
+                    let scrubDataForSymbol = this.scrubber.getDefinitionForSymbol(this.selectedText);
+                    if (scrubDataForSymbol) {
+                        let currentDocument = vscode.window.activeTextEditor!.document;
+                        let containingFile = scrubDataForSymbol[0].file;
+                        if (containingFile === currentDocument.uri) {
+                            this.moveToIndexInDocument(currentDocument, scrubDataForSymbol[0].location);
+                            this.setStatus(SearchStatus.found);
+                        }
+                        else {
+                            // found our definition => open and show the document				
+                            const document = await vscode.workspace.openTextDocument(containingFile);
+                            await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
 
-                                // focus at the line & column
-                                this.moveToIndexInDocument(document, scrubDataForSymbol[0].location);
-                                // update found status
-                                this.setStatus(SearchStatus.found);
-                            }
-                            
-                            return;
-                        }                        
-                    }
-                    catch (e: any){
-                        console.log("");
+                            // focus at the line & column
+                            this.moveToIndexInDocument(document, scrubDataForSymbol[0].location);
+                            // update found status
+                            this.setStatus(SearchStatus.found);
+                        }
+                        
+                        return;
                     }
 				}
 
