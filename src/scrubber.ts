@@ -22,9 +22,9 @@ export class Scrubber {
 	scrubStatus = ScrubStatus.setup;
 	definitionsMap = new Map<string, Definition[]>();
 
-	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions").definitions;
-	fileTypes: string = vscode.workspace.getConfiguration("naive-definitions").fileTypes;
-	generalMatcher: string = vscode.workspace.getConfiguration("naive-definitions").generalMatcher;
+	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions-vscode").definitions;
+	fileTypes: string = vscode.workspace.getConfiguration("naive-definitions-vscode").fileTypes;
+	generalMatcher: string = vscode.workspace.getConfiguration("naive-definitions-vscode").generalMatcher;
 	triedDefinitions: string[] = [];
 	filesScrubbed = 0;
 

@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	gScrubber.setStatusBarItem(statusBarItem, animatedstatusBarItem);
 	gScrubber.scrub();
 
-	let disposable = vscode.commands.registerCommand('naive-definitions.goToDefinition', async () => {
+	let disposable = vscode.commands.registerCommand('naive-definitions-vscode.goToDefinition', async () => {
 		// The code you place here will be executed every time your command is executed
 
 		// Get the active text editor

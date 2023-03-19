@@ -1,8 +1,10 @@
 {
-  "name": "naive-definitions",
-  "displayName": "Naive Definitions",
-  "description": "A naive, find-in-files implementation of going to the definition of a symbol",
-  "version": "1.2.0",
+  "name": "naive-definitions-vscode",
+  "displayName": "Regex Definitions",
+  "description": "A naive, regex find-in-files implementation of going to the definition of a symbol",
+  "publisher": "colaholicu",
+  "version": "1.2.3",
+  "icon": "images/icon.png",
   "repository": "https://github.com/colaholicu/naive-definitions",
   "engines": {
     "vscode": "^1.72.0"
@@ -17,14 +19,14 @@
   "contributes": {
     "commands": [
       {
-        "command": "naive-definitions.goToDefinition",
+        "command": "naive-definitions-vscode.goToDefinition",
         "title": "[Naive] Go To Definition"
       }
     ],
     "configuration": {
-      "title": "Naive Definitions",
+      "title": "Regex Definitions",
       "properties": {
-        "naive-definitions.definitions": {
+        "naive-definitions-vscode.definitions": {
           "type": "array",
           "items": {
             "type": "string",
@@ -34,11 +36,11 @@
           ],
           "description": "Various (preferably somewhat unique) keywords/prefixes or regexes to which the selected text will be added or, if using the ${SELECTED_TEXT} token, replaced. If a regex is used, it is the definition's that will be used instead of the general matcher. To signal a regex, the definition must start with ${regex}=. These should be specified in the order of precedence!"
         },
-        "naive-definitions.fileTypes": {
+        "naive-definitions-vscode.fileTypes": {
           "type": "string",
           "description": "A glob for file matching (example: **/*.{h,cpp} for matching all .h and .cpp files in the workspace)."
         },
-        "naive-definitions.generalMatcher": {
+        "naive-definitions-vscode.generalMatcher": {
           "type": "string",
           "default": "${DEFINITION}[(\"'\\t ]*${SELECTED_TEXT}",
           "description": "The expression to be used to match a selected text to a potential definition. ${DEFINITION} and ${SELECTED_TEXT} are tokens that will be replaced at runtime with the respective values. Can be empty if you want to use individual regexes for each expression."
@@ -48,8 +50,8 @@
     "menus": {
       "editor/context": [
         {
-          "command": "naive-definitions.goToDefinition",
-          "group": "naive-definitions",
+          "command": "naive-definitions-vscode.goToDefinition",
+          "group": "naive-definitions-vscode",
           "when": "editorHasSelection && editorTextFocus"
         }
       ]
