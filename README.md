@@ -15,20 +15,26 @@ This extension contributes the following settings:
 
 ## Example
 
-Definitions are various (preferably somewhat unique) keywords/prefixes or regexes to which the selected text will be matched against (via addition, regex etc.). Here is an example code block and definition entry:
+Definitions are various (preferably somewhat unique) keywords/prefixes or regexes to which the selected text will be matched against (via addition, regex etc.). Here is an example code block (containing a potential custom programming language) and definition entries:
 ### Code
 ```
 def custom_dictionary = dict(key1 = "string_value", key2 = 13)
+CREATE_CUSTOM_STRUCT(CUSTOM_STRUCT1, 3, "Entry1", "Entry2", "Entry3")
 
-print("Key1 is {}".format(custom_dictionary.key1))
+print("Key1 is {}".format(custom_dictionary.key1)) # outputs "Key1 is "string_value""
+print("Field[2] of custom struct is {}".format(CUSTOM_STRUCT1.at(2)) # outputs "Field[2] of custom struct is "Entry2""
 ```
 ### Settings
 ```
 "naive-definitions-vscode.definitions": [
-  "def"
+  "def",
+  "CREATE_CUSTOM_STRUCT",
 ]
 ```
-For the above code, using the default matcher and the provided definitions, if the selection is "custom_dictionary", it will try to look for places in the workspace's files where it can find "def custom_dictionary". If successful, it will point to the line containing `def custom_dictionary = dict(key1 = "string_value", key2 = 13)`
+For the above code, using the default matcher and the provided definitions, it will go through the workspaces' files and:
+* if the selection is "custom_dictionary", it will point to the line containing `def custom_dictionary = dict(key1 = "string_value", key2 = 13)`
+* if the selection is the "CUSTOM_STRUCT1", it will point to the line containing `CREATE_CUSTOM_STRUCT(CUSTOM_STRUCT1, 3, "Entry1", "Entry2", "Entry3")`
+* if the selection is "Entry1", it will fail since it couldn't find any matching pair of definition & selection 
 
 ## Release Notes
 
