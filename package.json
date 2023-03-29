@@ -3,7 +3,7 @@
   "displayName": "Regex Definitions",
   "description": "A naive, regex find-in-files implementation of going to the definition of a symbol",
   "publisher": "colaholicu",
-  "version": "1.2.3",
+  "version": "1.2.5",
   "icon": "images/icon.png",
   "repository": "https://github.com/colaholicu/naive-definitions",
   "engines": {
