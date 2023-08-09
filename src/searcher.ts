@@ -15,19 +15,19 @@ export class Searcher {
 	searchFiles: vscode.Uri[] = [];
 	searchStatus = SearchStatus.setup;
 	useScrubData = true;
-    scrubber : Scrubber;
+	scrubber: Scrubber;
 
 	foundMatch = false;
-	definitions:string[] = vscode.workspace.getConfiguration("naive-definitions-vscode").definitions;
+	definitions: string[] = vscode.workspace.getConfiguration("naive-definitions-vscode").definitions;
 	fileTypes: string = vscode.workspace.getConfiguration("naive-definitions-vscode").fileTypes;
 	generalMatcher: string = vscode.workspace.getConfiguration("naive-definitions-vscode").generalMatcher;
 	triedDefinitions: string[] = [];
 	filesSearched = 0;
 	triedCurrentFile = false;
-	
+
 	constructor(selectedText: string, scrubber: any) {
 		this.selectedText = selectedText;
-        this.scrubber = scrubber;
+		this.scrubber = scrubber;
 	}
 
 	setStatus(status: SearchStatus) {
@@ -57,28 +57,39 @@ export class Searcher {
 				}
 
 				if (this.useScrubData) {
-                    // check scrub data
-                    let scrubDataForSymbol = this.scrubber.getDefinitionForSymbol(this.selectedText);
-                    if (scrubDataForSymbol) {
-                        let currentDocument = vscode.window.activeTextEditor!.document;
-                        let containingFile = scrubDataForSymbol[0].file;
-                        if (containingFile === currentDocument.uri) {
-                            this.moveToIndexInDocument(currentDocument, scrubDataForSymbol[0].location);
-                            this.setStatus(SearchStatus.found);
-                        }
-                        else {
-                            // found our definition => open and show the document				
-                            const document = await vscode.workspace.openTextDocument(containingFile);
-                            await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
+					// check scrub data
+					let scrubDataForSymbol = this.scrubber.getDefinitionForSymbol(this.selectedText);
+					if (scrubDataForSymbol) {
+						let containingFile = scrubDataForSymbol[0].file;
+						let currentDocument = vscode.window.activeTextEditor!.document;
+						if (containingFile === currentDocument.uri) {
+							this.moveToIndexInDocument(currentDocument, scrubDataForSymbol[0].location);
+							this.setStatus(SearchStatus.found);
+						}
+						else {
+							// prioritize current file
+							for (let i = 0; i < scrubDataForSymbol.length; i++) {
+								if (scrubDataForSymbol[i].file.path === currentDocument.uri.path) {
+									containingFile = scrubDataForSymbol[i].file;
 
-                            // focus at the line & column
-                            this.moveToIndexInDocument(document, scrubDataForSymbol[0].location);
-                            // update found status
-                            this.setStatus(SearchStatus.found);
-                        }
-                        
-                        return;
-                    }
+									this.moveToIndexInDocument(currentDocument, scrubDataForSymbol[i].location);
+									this.setStatus(SearchStatus.found);
+									return;
+								}
+							}
+
+							// found our definition => open and show the document				
+							const document = await vscode.workspace.openTextDocument(containingFile);
+							await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true });
+
+							// focus at the line & column
+							this.moveToIndexInDocument(document, scrubDataForSymbol[0].location);
+							// update found status
+							this.setStatus(SearchStatus.found);
+						}
+
+						return;
+					}
 				}
 
 				// try one more definition
@@ -160,17 +171,16 @@ export class Searcher {
 		}
 	}
 
-	getIndexOfPotentialDefinition(documentText : string)
-	{
+	getIndexOfPotentialDefinition(documentText: string) {
 		const matchedLocation = documentText.match(this.potentialDefinition);
 		if (matchedLocation && matchedLocation.index !== undefined) {
 			return matchedLocation.index;
 		}
-		
+
 		return -1;
 	}
 
-	moveToIndexInDocument(document : vscode.TextDocument, index : number) {
+	moveToIndexInDocument(document: vscode.TextDocument, index: number) {
 		if (!vscode.window.activeTextEditor) {
 			return false;
 		}
@@ -207,7 +217,7 @@ export class Searcher {
 			if (this.searchStatus === SearchStatus.found) {
 				return;
 			}
-			
+
 			const fileContents = await vscode.workspace.fs.readFile(uri);
 			const indexOfPotentialDefinition = this.getIndexOfPotentialDefinition(fileContents?.toString());
 			if (indexOfPotentialDefinition === -1) {
