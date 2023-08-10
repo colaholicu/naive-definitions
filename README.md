@@ -38,6 +38,9 @@ For the above code, using the default matcher and the provided definitions, it w
 
 ## Release Notes
 
+### 1.2.6
+Made the currently opened file's definitions prioritary
+
 ### 1.2.5
 Update description and examples
 
