@@ -151,6 +151,13 @@ export class Scrubber {
 		this.scrubFiles.forEach(async uri => {
 			this.currentScrubs++;
 			this.updateScrubProgress();
+
+			const fileName = uri.toString();
+			const extension = fileName.split('.').pop()!;
+			if (this.fileTypes.indexOf(extension) === -1) {
+				return;
+			}
+
 			const fileContents = await vscode.workspace.fs.readFile(uri);
 			if (fileContents) {
 				const regexp = new RegExp("(" + this.potentialDefinition + ")(\\W*)(\\w*)", "g");
@@ -170,6 +177,13 @@ export class Scrubber {
 					this.setStatus(ScrubStatus.done);
 					return;
 				}
+			}
+
+			this.filesScrubbed++;
+			// tried all files --> try another definition
+			if (this.filesScrubbed >= this.scrubFiles.length) {
+				this.setStatus(ScrubStatus.done);
+				return;
 			}
 		});
 

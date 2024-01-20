@@ -9,7 +9,7 @@ let gScrubber = new Scrubber();
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export async function activate(context: vscode.ExtensionContext) {				
+export async function activate(context: vscode.ExtensionContext) {
 
 	// create a new status bar item that we can now manage
 	let statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -49,10 +49,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((e) => {
 		const fileName = e.uri.toString();
 		const extension = fileName.split('.').pop()!;
+
 		// ignore files we don't care about
 		if (gScrubber.fileTypes.indexOf(extension) === -1) {
 			return;
 		}
+		
 		// for now only trigger when scrubbing was complete, might have some desync data, but it's fine
 		if (gScrubber.scrubStatus === ScrubStatus.complete) {
 			gScrubber.setStatus(ScrubStatus.setup);
